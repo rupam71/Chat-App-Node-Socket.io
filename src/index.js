@@ -4,7 +4,7 @@ const http = require('http')
 const express = require('express')
 const socketio = require('socket.io')
 const Filter = require('bad-words')
-
+const { generateMessage , locationMessage } = require('./utils/messages')
 // require('./db/mongoose')
 
 const app = express()
@@ -36,9 +36,14 @@ io.on('connection', (socket)=>{
     //    // io.emit will change everyone
     //    // socket.emit only change himself
     // })
-
-    socket.emit('message', 'Welcome!!')
-    socket.broadcast.emit('message', 'New Friend Come..........')
+    generateMessage
+    // socket.emit('message', 'Welcome!!')
+    // socket.emit('message', {
+    //     text: 'Welcome!!',
+    //     createdAt: new Date().getTime()
+    // })
+    socket.emit('message', generateMessage('Welcome!!'))
+    socket.broadcast.emit('message', generateMessage('New Friend Come..........'))
 
     //AS USUAL
     // socket.on('sendMessage', (message)=>{
@@ -52,13 +57,13 @@ io.on('connection', (socket)=>{
             return callback('Profancy Not Allowed')
         }
         
-        io.emit('message', message)
+        io.emit('message', generateMessage(message))
         // callback('Deliverd')
         callback()
     })
 
     socket.on('disconnect', ()=>{
-        io.emit('message', 'A user left chat..........')
+        io.emit('message', generateMessage('A user left chat..........'))
     })
 
     // socket.on('sendLocation', (coords)=>{
@@ -68,7 +73,8 @@ io.on('connection', (socket)=>{
     // })
 
     socket.on('sendLocation', (coords, callback)=>{
-        io.emit('message', `Location: https://google.com/maps?q=${coords.latitude},${coords.longitude}`)
+        let url = `https://google.com/maps?q=${coords.latitude},${coords.longitude}`
+        io.emit('locationMessage', locationMessage(url))
         callback()
     })
 })
