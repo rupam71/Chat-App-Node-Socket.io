@@ -36,14 +36,30 @@ io.on('connection', (socket)=>{
     //    // io.emit will change everyone
     //    // socket.emit only change himself
     // })
-    generateMessage
+    
     // socket.emit('message', 'Welcome!!')
     // socket.emit('message', {
     //     text: 'Welcome!!',
     //     createdAt: new Date().getTime()
     // })
-    socket.emit('message', generateMessage('Welcome!!'))
-    socket.broadcast.emit('message', generateMessage('New Friend Come..........'))
+    
+    
+    // socket.emit('message', generateMessage('Welcome!!'))
+    // socket.broadcast.emit('message', generateMessage('New Friend Come..........'))
+
+
+
+    // join will connect us in our room
+    // this join come from socket
+    // io.to.emit --> send everybody in spesific room
+    // socket.broadcast.to.emit --> sending to everyone
+    //without himself but in spesific room
+    socket.on('join', ({username,room})=>{
+        socket.join(room)
+
+        socket.emit('message', generateMessage('Welcome!!'))
+        socket.broadcast.to(room).emit('message', generateMessage(`${username} has joined`))
+    })
 
     //AS USUAL
     // socket.on('sendMessage', (message)=>{
