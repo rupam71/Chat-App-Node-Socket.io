@@ -5,6 +5,8 @@ const express = require('express')
 const socketio = require('socket.io')
 const Filter = require('bad-words')
 const { generateMessage , locationMessage } = require('./utils/messages')
+const {addUser,removeUser,getUser,getUsersInRoom} = require('./utils/users')
+
 // require('./db/mongoose')
 
 const app = express()
@@ -54,11 +56,29 @@ io.on('connection', (socket)=>{
     // io.to.emit --> send everybody in spesific room
     // socket.broadcast.to.emit --> sending to everyone
     //without himself but in spesific room
-    socket.on('join', ({username,room})=>{
-        socket.join(room)
+    
+    socket.on('join', (options, callback) => {
+        const { error, user } = addUser({ id: socket.id, ...options })
 
-        socket.emit('message', generateMessage('Welcome!!'))
-        socket.broadcast.to(room).emit('message', generateMessage(`${username} has joined`))
+        if (error) {
+            return callback(error)
+        }
+
+        socket.join(user.room)
+
+        socket.emit('message', generateMessage('Admin', 'Welcome!'))
+        socket.broadcast.to(user.room).emit('message', generateMessage('Admin', `${user.username} has joined!`))
+
+
+        // room chat list
+        //when some one add to the room, list will change
+        io.to(user.room).emit('roomData',{
+            room: user.room,
+            users:getUsersInRoom(user.room)
+        })
+
+        
+        callback()
     })
 
     //AS USUAL
@@ -69,18 +89,32 @@ io.on('connection', (socket)=>{
      socket.on('sendMessage', (message, callback)=>{
         const filter = new Filter()
 
+        const user = getUser(socket.id)
+
         if(filter.isProfane(message)){
             return callback('Profancy Not Allowed')
         }
         
-        io.emit('message', generateMessage(message))
+        io.to(user.room).emit('message', generateMessage(user.username, message))
+
         // callback('Deliverd')
         callback()
     })
 
     socket.on('disconnect', ()=>{
-        io.emit('message', generateMessage('A user left chat..........'))
-    })
+        const user = removeUser(socket.id)
+
+        if(user) {
+            io.to(user.room).emit('message', generateMessage('Admin', `${user.username} has left`))
+            
+            // room chat list
+        //when some one add to the room, list will change
+        io.to(user.room).emit('roomData',{
+            room: user.room,
+            users:getUsersInRoom(user.room)
+        })
+
+    }})
 
     // socket.on('sendLocation', (coords)=>{
     //   //  io.emit('message', coords)
@@ -89,8 +123,9 @@ io.on('connection', (socket)=>{
     // })
 
     socket.on('sendLocation', (coords, callback)=>{
+        const user = getUser(socket.id)
         let url = `https://google.com/maps?q=${coords.latitude},${coords.longitude}`
-        io.emit('locationMessage', locationMessage(url))
+        io.to(user.room).emit('locationMessage', locationMessage(user.username, url))
         callback()
     })
 })
